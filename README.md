@@ -233,3 +233,6 @@ The dashboard uses z-score per category. Any transaction more than 2 standard de
 
 ##Test API here:
 https://stats.uptimerobot.com/PZ1vc5iu00
+https://genai-transaction-api.onrender.com 
+gemini-3.1-flash-lite-preview
+https://docs.google.com/spreadsheets/d/1WYN-sFVT8n6Hz8hef1mVnWO9G2W8raUXcAbZQo6EK_U/edit?usp=sharing
