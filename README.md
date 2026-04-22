@@ -229,3 +229,7 @@ The dashboard uses z-score per category. Any transaction more than 2 standard de
 | Render Web Service | Free |
 | Streamlit Cloud | Free |
 | **Total** | **RM 0 / month** |
+
+
+##Test API here:
+https://stats.uptimerobot.com/PZ1vc5iu00

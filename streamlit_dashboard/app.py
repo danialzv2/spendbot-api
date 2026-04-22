@@ -4,8 +4,8 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, timedelta
 import plotly.express as px
-import os
 import json
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,25 +27,24 @@ html, body, [class*="css"] { font-family: 'Syne', sans-serif; }
 .anomaly-banner {
     background: #1f1010; border: 1px solid #8b2020; border-radius: 10px;
     padding: 0.9rem 1.2rem; color: #f08080;
-    font-family: 'DM Mono', monospace; font-size: 0.85rem; margin-bottom: 1rem;
+    font-family: 'DM Mono', monospace; font-size: 0.85rem; margin-bottom: 0.6rem;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Google Sheets connection ───────────────────────────────────────────────────
+# ── Google Sheets connection ──────────────────────────────────────────────────
 @st.cache_resource
 def get_sheet():
-    # Works both locally (from .env) and on Streamlit Cloud (from st.secrets)
+    # Works both locally (via .env) and on Streamlit Cloud (via st.secrets)
     try:
         creds_raw = st.secrets["GSHEET_CREDS"]
+        sheet_name = st.secrets.get("GSHEET_NAME", "SpendBot")
     except Exception:
         creds_raw = os.environ["GSHEET_CREDS"]
-
-    try:
-        sheet_name = st.secrets["GSHEET_NAME"]
-    except Exception:
         sheet_name = os.environ.get("GSHEET_NAME", "SpendBot")
 
+    # Fix escaped newlines in private key (common issue when pasting JSON into .env)
+    creds_raw = creds_raw.replace("\\n", "\n")
     creds_dict = json.loads(creds_raw)
     scopes = [
         "https://spreadsheets.google.com/feeds",
@@ -60,9 +59,9 @@ def load_data():
     sheet = get_sheet()
     records = sheet.get_all_records()
     if not records:
-        return pd.DataFrame(columns=["timestamp","chat_id","amount","category","place","note"])
+        return pd.DataFrame(columns=["timestamp", "chat_id", "amount", "category", "place", "note"])
     df = pd.DataFrame(records)
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
     df["date"] = df["timestamp"].dt.date
     return df
@@ -87,24 +86,23 @@ def detect_anomalies(df: pd.DataFrame, threshold: float = 2.0) -> pd.DataFrame:
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 st.markdown('<div style="font-size:2.4rem;font-weight:800;letter-spacing:-1px">💸 SpendBot Dashboard</div>', unsafe_allow_html=True)
-st.markdown('<div style="font-family:\'DM Mono\',monospace;font-size:0.8rem;color:#555;margin-bottom:1.5rem">your spending · powered by google sheets + gemini</div>', unsafe_allow_html=True)
+st.markdown('<div style="font-family:\'DM Mono\',monospace;font-size:0.8rem;color:#555;margin-bottom:1.5rem">your spending · google sheets + gemini</div>', unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("### 🔧 Filters")
     period = st.selectbox("Period", ["Last 7 days", "Last 30 days", "Last 90 days", "All time"])
     period_days = {"Last 7 days": 7, "Last 30 days": 30, "Last 90 days": 90, "All time": None}[period]
-    chat_id_filter = st.text_input("Filter by Telegram Chat ID (optional)", help="Leave blank to see all users")
+    chat_id_filter = st.text_input("Filter by Telegram Chat ID", help="Leave blank to show all users")
     st.markdown("---")
     if st.button("🔄 Refresh data"):
         st.cache_data.clear()
         st.rerun()
     st.caption("Auto-refreshes every 60s")
 
-# Load data
 try:
     df_raw = load_data()
 except Exception as e:
-    st.error(f"Google Sheets error: {e}")
+    st.error(f"Could not load Google Sheet: {e}")
     st.stop()
 
 if df_raw.empty:
@@ -120,7 +118,7 @@ if period_days:
     df = df[df["timestamp"] >= cutoff]
 
 if df.empty:
-    st.warning("No data for the selected filters.")
+    st.warning("No data for selected filters.")
     st.stop()
 
 df = detect_anomalies(df)
@@ -129,23 +127,22 @@ df = detect_anomalies(df)
 for _, row in df[df["is_anomaly"]].iterrows():
     st.markdown(
         f'<div class="anomaly-banner">🚨 <b>Unusual spend:</b> RM {row["amount"]:.2f} '
-        f'on {row["category"]} at {row["place"]} ({row["timestamp"].strftime("%d %b %Y")})</div>',
+        f'on {row["category"]} at {row["place"]} '
+        f'({row["timestamp"].strftime("%d %b %Y")})</div>',
         unsafe_allow_html=True
     )
 
-# ── KPI Metrics ───────────────────────────────────────────────────────────────
-total    = df["amount"].sum()
-avg_day  = df.groupby("date")["amount"].sum().mean()
-top_cat  = df.groupby("category")["amount"].sum().idxmax()
-tx_count = len(df)
+# ── KPI cards ─────────────────────────────────────────────────────────────────
+total = df["amount"].sum()
+avg_daily = df.groupby("date")["amount"].sum().mean()
+top_cat = df.groupby("category")["amount"].sum().idxmax()
+txn_count = len(df)
 
-col1, col2, col3, col4 = st.columns(4)
-for col, label, value in [
-    (col1, "Total Spent",    f"RM {total:,.2f}"),
-    (col2, "Avg / Day",      f"RM {avg_day:,.2f}"),
-    (col3, "Top Category",   top_cat),
-    (col4, "Transactions",   str(tx_count)),
-]:
+for col, label, value in zip(
+    st.columns(4),
+    ["Total Spent", "Avg / Day", "Top Category", "Transactions"],
+    [f"RM {total:,.2f}", f"RM {avg_daily:,.2f}", top_cat, str(txn_count)],
+):
     with col:
         st.markdown(
             f'<div class="metric-card"><div class="metric-label">{label}</div>'
@@ -156,46 +153,42 @@ for col, label, value in [
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Charts ────────────────────────────────────────────────────────────────────
-col_l, col_r = st.columns([3, 2])
+DARK = dict(plot_bgcolor="#141414", paper_bgcolor="#141414", font_color="#f0ede6")
 
-with col_l:
+col1, col2 = st.columns([3, 2])
+with col1:
     daily = df.groupby("date")["amount"].sum().reset_index()
     fig = px.bar(daily, x="date", y="amount", title="Daily Spending", color_discrete_sequence=["#c8f564"])
-    fig.update_layout(plot_bgcolor="#141414", paper_bgcolor="#141414", font_color="#f0ede6",
-                      xaxis=dict(gridcolor="#222"), yaxis=dict(gridcolor="#222"), margin=dict(l=0,r=0,t=40,b=0))
+    fig.update_layout(**DARK, xaxis=dict(gridcolor="#222"), yaxis=dict(gridcolor="#222"), margin=dict(l=0,r=0,t=40,b=0))
     st.plotly_chart(fig, use_container_width=True)
 
-with col_r:
+with col2:
     cat_totals = df.groupby("category")["amount"].sum().reset_index()
-    fig2 = px.pie(cat_totals, values="amount", names="category", title="By Category",
-                  color_discrete_sequence=px.colors.sequential.Plasma_r, hole=0.45)
-    fig2.update_layout(plot_bgcolor="#141414", paper_bgcolor="#141414", font_color="#f0ede6",
-                       margin=dict(l=0,r=0,t=40,b=0))
-    st.plotly_chart(fig2, use_container_width=True)
+    fig = px.pie(cat_totals, values="amount", names="category", title="By Category",
+                 color_discrete_sequence=px.colors.sequential.Plasma_r, hole=0.45)
+    fig.update_layout(**DARK, margin=dict(l=0,r=0,t=40,b=0))
+    st.plotly_chart(fig, use_container_width=True)
 
-col_a, col_b = st.columns(2)
-
-with col_a:
+col3, col4 = st.columns(2)
+with col3:
     df["week"] = df["timestamp"].dt.to_period("W").astype(str)
-    weekly = df.groupby(["week","category"])["amount"].sum().reset_index()
-    fig3 = px.bar(weekly, x="week", y="amount", color="category", title="Weekly by Category",
-                  color_discrete_sequence=px.colors.qualitative.Safe)
-    fig3.update_layout(plot_bgcolor="#141414", paper_bgcolor="#141414", font_color="#f0ede6",
-                       xaxis=dict(gridcolor="#222"), yaxis=dict(gridcolor="#222"), margin=dict(l=0,r=0,t=40,b=0))
-    st.plotly_chart(fig3, use_container_width=True)
+    weekly = df.groupby(["week", "category"])["amount"].sum().reset_index()
+    fig = px.bar(weekly, x="week", y="amount", color="category", title="Weekly by Category",
+                 color_discrete_sequence=px.colors.qualitative.Safe)
+    fig.update_layout(**DARK, xaxis=dict(gridcolor="#222"), yaxis=dict(gridcolor="#222"), margin=dict(l=0,r=0,t=40,b=0))
+    st.plotly_chart(fig, use_container_width=True)
 
-with col_b:
+with col4:
     top_places = df.groupby("place")["amount"].sum().nlargest(8).reset_index()
-    fig4 = px.bar(top_places, x="amount", y="place", orientation="h", title="Top Places",
-                  color_discrete_sequence=["#c8f564"])
-    fig4.update_layout(plot_bgcolor="#141414", paper_bgcolor="#141414", font_color="#f0ede6",
-                       xaxis=dict(gridcolor="#222"), yaxis=dict(gridcolor="#222", autorange="reversed"),
-                       margin=dict(l=0,r=0,t=40,b=0))
-    st.plotly_chart(fig4, use_container_width=True)
+    fig = px.bar(top_places, x="amount", y="place", orientation="h", title="Top Places",
+                 color_discrete_sequence=["#c8f564"])
+    fig.update_layout(**DARK, yaxis=dict(gridcolor="#222", autorange="reversed"),
+                      xaxis=dict(gridcolor="#222"), margin=dict(l=0,r=0,t=40,b=0))
+    st.plotly_chart(fig, use_container_width=True)
 
 # ── Recent transactions ───────────────────────────────────────────────────────
 st.markdown("### 📋 Recent Transactions")
-recent = df[["timestamp","amount","category","place","note","is_anomaly"]].head(50).copy()
+recent = df[["timestamp","amount","category","place","note","is_anomaly"]].copy().head(50)
 recent["timestamp"] = recent["timestamp"].dt.strftime("%d %b %Y %H:%M")
 recent["amount"] = recent["amount"].apply(lambda x: f"RM {x:.2f}")
 recent["🚨"] = recent["is_anomaly"].apply(lambda x: "🚨" if x else "")
