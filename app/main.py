@@ -5,25 +5,24 @@ import os
 import json
 import re
 from datetime import datetime, timedelta
-import google.generativeai as genai
+from google import genai
 import gspread
 from google.oauth2.service_account import Credentials
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-# Load .env locally (Railway uses env vars set in dashboard)
 load_dotenv()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 GSHEET_NAME    = os.environ.get("GSHEET_NAME", "SpendBot")
-GSHEET_CREDS   = os.environ["GSHEET_CREDS"]   # full service account JSON as a string
+GSHEET_CREDS   = os.environ["GSHEET_CREDS"]
 TELEGRAM_API   = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
-# ── Gemini init ───────────────────────────────────────────────────────────────
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.5-flash-preview-04-17")
+# ── Gemini init (new SDK) ─────────────────────────────────────────────────────
+gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+GEMINI_MODEL  = "gemini-3.1-flash-lite-preview"
 
 # ── Google Sheets init ────────────────────────────────────────────────────────
 def init_sheet():
@@ -35,11 +34,8 @@ def init_sheet():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
     sheet = client.open(GSHEET_NAME).sheet1
-
-    # Auto-create headers if sheet is empty
     if not sheet.row_values(1):
         sheet.append_row(["timestamp", "chat_id", "amount", "category", "place", "note"])
-
     return sheet
 
 # ── Sheet helpers ─────────────────────────────────────────────────────────────
@@ -53,7 +49,6 @@ def insert_spending(sheet, chat_id: int, amount: float, category: str, place: st
 def query_summary(sheet, chat_id: int, period: str = "month") -> dict:
     records = sheet.get_all_records()
     now = datetime.now()
-
     if period == "today":
         cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0)
     elif period == "week":
@@ -63,7 +58,6 @@ def query_summary(sheet, chat_id: int, period: str = "month") -> dict:
 
     breakdown = {}
     total = 0.0
-
     for row in records:
         if str(row.get("chat_id")) != str(chat_id):
             continue
@@ -83,7 +77,7 @@ def query_summary(sheet, chat_id: int, period: str = "month") -> dict:
 
 # ── Gemini parser ─────────────────────────────────────────────────────────────
 PARSE_PROMPT = """\
-You are an spending log parser for a Malaysian user. Extract spending info from the message.
+You are a spending log parser for a Malaysian user. Extract spending info from the message.
 Return ONLY valid JSON, no markdown, no extra text.
 
 JSON keys:
@@ -103,7 +97,10 @@ Examples:
 """
 
 async def parse_message(text: str) -> dict:
-    response = model.generate_content(PARSE_PROMPT + f'\n\nMessage: "{text}"')
+    response = gemini_client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=PARSE_PROMPT + f'\n\nMessage: "{text}"',
+    )
     raw = re.sub(r"```json|```", "", response.text).strip()
     return json.loads(raw)
 
@@ -168,7 +165,6 @@ app = FastAPI(lifespan=lifespan)
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
-
     message = data.get("message") or data.get("edited_message")
     if not message:
         return JSONResponse({"ok": True})
@@ -183,34 +179,23 @@ async def webhook(request: Request):
         intent = parsed.get("intent", "unknown")
 
         if parsed.get("is_spending") and intent == "log":
-            insert_spending(
-                sheet,
-                chat_id=chat_id,
-                amount=parsed["amount"],
-                category=parsed["category"],
-                place=parsed.get("place") or "Unknown",
-                note=parsed.get("note") or "",
-            )
+            insert_spending(sheet, chat_id=chat_id, amount=parsed["amount"],
+                            category=parsed["category"], place=parsed.get("place") or "Unknown",
+                            note=parsed.get("note") or "")
             emoji = CAT_EMOJI.get(parsed["category"], "📦")
-            reply = (
-                f"✅ *Logged!*\n\n"
-                f"{emoji} *{parsed['category']}* — RM {parsed['amount']:.2f}\n"
-                f"📍 {parsed.get('place') or 'Unknown'}\n"
-                f"📝 {parsed.get('note') or '-'}"
-            )
+            reply = (f"✅ *Logged!*\n\n"
+                     f"{emoji} *{parsed['category']}* — RM {parsed['amount']:.2f}\n"
+                     f"📍 {parsed.get('place') or 'Unknown'}\n"
+                     f"📝 {parsed.get('note') or '-'}")
 
         elif intent == "summary_today":
             reply = format_summary(query_summary(sheet, chat_id, "today"))
-
         elif intent == "summary_week":
             reply = format_summary(query_summary(sheet, chat_id, "week"))
-
         elif intent == "summary_month":
             reply = format_summary(query_summary(sheet, chat_id, "month"))
-
         elif intent == "help":
             reply = HELP_TEXT
-
         else:
             reply = "🤔 I didn't catch that. Type `help` to see what I can do."
 
@@ -222,7 +207,6 @@ async def webhook(request: Request):
     await send_message(chat_id, reply)
     return JSONResponse({"ok": True})
 
-# ── Health check ──────────────────────────────────────────────────────────────
 @app.get("/")
 async def health():
     return {"status": "SpendBot is running 🚀"}
