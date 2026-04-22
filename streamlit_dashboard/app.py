@@ -43,9 +43,12 @@ def get_sheet():
         creds_raw = os.environ["GSHEET_CREDS"]
         sheet_name = os.environ.get("GSHEET_NAME", "SpendBot")
 
-    # Fix escaped newlines in private key (common issue when pasting JSON into .env)
-    creds_raw = creds_raw.replace("\\n", "\n")
-    creds_dict = json.loads(creds_raw)
+    # Streamlit Cloud may parse it as a dict already, or as a string
+    if isinstance(creds_raw, dict):
+        creds_dict = dict(creds_raw)
+    else:
+        creds_raw = creds_raw.replace("\\n", "\n")
+        creds_dict = json.loads(creds_raw)
     scopes = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
