@@ -160,7 +160,7 @@ streamlit run app.py
 ```bash
 python register_webhook.py \
   --token YOUR_TELEGRAM_TOKEN \
-  --url https://your-app.onrender.com/webhook
+  --url https://spendbot-api.onrender.com/
 ```
 
 Verify it worked:
