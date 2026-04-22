@@ -35,20 +35,16 @@ html, body, [class*="css"] { font-family: 'Syne', sans-serif; }
 # ── Google Sheets connection ──────────────────────────────────────────────────
 @st.cache_resource
 def get_sheet():
-    # Works both locally (via .env) and on Streamlit Cloud (via st.secrets)
-    try:
-        creds_raw = st.secrets["GSHEET_CREDS"]
+    # Try Streamlit secrets first (TOML table format)
+    if "GSHEET_CREDS" in st.secrets:
         sheet_name = st.secrets.get("GSHEET_NAME", "SpendBot")
-    except Exception:
-        creds_raw = os.environ["GSHEET_CREDS"]
-        sheet_name = os.environ.get("GSHEET_NAME", "SpendBot")
-
-    # Streamlit Cloud may parse it as a dict already, or as a string
-    if isinstance(creds_raw, dict):
-        creds_dict = dict(creds_raw)
+        creds_dict = {k: v for k, v in st.secrets["GSHEET_CREDS"].items()}
     else:
-        creds_raw = creds_raw.replace("\\n", "\n")
+        # Local .env fallback
+        sheet_name = os.environ.get("GSHEET_NAME", "SpendBot")
+        creds_raw = os.environ["GSHEET_CREDS"].replace("\\n", "\n")
         creds_dict = json.loads(creds_raw)
+
     scopes = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
