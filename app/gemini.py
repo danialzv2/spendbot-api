@@ -50,7 +50,6 @@ async def parse_message(text: str) -> dict:
         model=GEMINI_MODEL,
         contents=_PARSE_PROMPT + f'\n\nMessage: "{text}"',
         config=types.GenerateContentConfig(
-            max_output_tokens=256,  # enough for any JSON response
             temperature=0.1,        # near-deterministic for structured parsing
         ),
     )
