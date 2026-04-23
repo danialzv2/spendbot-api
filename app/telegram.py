@@ -55,6 +55,15 @@ HELP_TEXT = """\
 • `summary this week`
 • `summary this month`
 
+*Ask for financial advice:*
+• `how much should i save daily?`
+• `my salary is rm4000, am i overspending?`
+• `can i afford rm800 rent?`
+• `analyse my spending habits`
+• `which category should i cut down?`
+• `how much will i spend this month?`
+• `if i earn rm5000, what's left after spending?`
+
 *Other:*
 • `help` — show this message
 

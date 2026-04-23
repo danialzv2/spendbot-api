@@ -3,8 +3,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from sheets import init_sheet, insert_spending, query_summary
+from sheets import init_sheet, insert_spending, query_summary, get_financial_context
 from gemini import parse_message
+from advisor import get_advice
 from telegram import send_message, format_log_reply, format_summary, HELP_TEXT
 
 # ── App lifecycle ─────────────────────────────────────────────────────────────
@@ -60,6 +61,12 @@ async def webhook(request: Request):
 
         elif intent == "summary_month":
             reply = format_summary(query_summary(sheet, chat_id, "month"))
+
+        elif intent == "advice":
+            # Pull rich spending context, then ask Gemini for advice
+            await send_message(chat_id, "🤔 _Analysing your spending data..._")
+            context = get_financial_context(sheet, chat_id)
+            reply   = await get_advice(question=text, context=context)
 
         elif intent == "help":
             reply = HELP_TEXT
