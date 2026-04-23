@@ -65,8 +65,11 @@ async def webhook(request: Request):
         elif intent == "advice":
             # Pull rich spending context, then ask Gemini for advice
             await send_message(chat_id, "🤔 _Analysing your spending data..._")
-            context = get_financial_context(sheet, chat_id)
-            reply   = await get_advice(question=text, context=context)
+            try:
+                context = get_financial_context(sheet, chat_id)
+                reply   = await get_advice(question=text, context=context)
+            except Exception as e:
+                reply = f"⚠️ Couldn't generate advice: {str(e)}"
 
         elif intent == "help":
             reply = HELP_TEXT

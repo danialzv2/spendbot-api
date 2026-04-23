@@ -6,7 +6,7 @@ from config import GEMINI_API_KEY, GEMINI_MODEL
 _client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ── Token budget ──────────────────────────────────────────────────────────────
-_MAX_OUTPUT_TOKENS = 300   # ~200-250 words in reply — enough for advice, cheap to run
+_MAX_OUTPUT_TOKENS = 400   # ~300 words — enough for advice without being excessive
 
 _ADVISOR_SYSTEM = """\
 You are SpendBot's finance advisor for a Malaysian user. Be concise and direct.
