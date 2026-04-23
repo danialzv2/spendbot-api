@@ -1,6 +1,7 @@
 import json
 import re
 from google import genai
+from google.genai import types
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
 _client = genai.Client(api_key=GEMINI_API_KEY)
@@ -48,6 +49,10 @@ async def parse_message(text: str) -> dict:
     response = _client.models.generate_content(
         model=GEMINI_MODEL,
         contents=_PARSE_PROMPT + f'\n\nMessage: "{text}"',
+        config=types.GenerateContentConfig(
+            max_output_tokens=120,  # JSON response is tiny, no need for more
+            temperature=0.1,        # near-deterministic for structured parsing
+        ),
     )
     raw = re.sub(r"```json|```", "", response.text).strip()
     return json.loads(raw)
