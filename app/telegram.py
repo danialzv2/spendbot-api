@@ -9,10 +9,18 @@ async def send_message(chat_id: int, text: str) -> None:
             json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
         )
 
-
 # ── Formatters ────────────────────────────────────────────────────────────────
+def format_log_reply(parsed: dict, timestamp: str) -> str:
+    emoji = CAT_EMOJI.get(parsed["category"], "📦")
+    return (
+        f"✅ *Logged!* _{timestamp}_\n\n"
+        f"{emoji} *{parsed['category']}* — RM {parsed['amount']:.2f}\n"
+        f"📍 {parsed.get('place') or 'Unknown'}\n"
+        f"📝 {parsed.get('note') or '-'}"
+    )
+
+
 def format_receipt_reply(parsed: dict, timestamp: str) -> str:
-    from config import CAT_EMOJI
     emoji      = CAT_EMOJI.get(parsed["category"], "📦")
     confidence = parsed.get("confidence", "high")
     conf_note  = "" if confidence == "high" else f"\n⚠️ _Confidence: {confidence} — please verify amount_"
@@ -28,16 +36,6 @@ def format_receipt_reply(parsed: dict, timestamp: str) -> str:
     )
 
 
-
-    emoji = CAT_EMOJI.get(parsed["category"], "📦")
-    return (
-        f"✅ *Logged!* _{timestamp}_\n\n"
-        f"{emoji} *{parsed['category']}* — RM {parsed['amount']:.2f}\n"
-        f"📍 {parsed.get('place') or 'Unknown'}\n"
-        f"📝 {parsed.get('note') or '-'}"
-    )
-
-
 def format_summary(data: dict) -> str:
     period_label = {
         "today": "Today",
@@ -45,10 +43,8 @@ def format_summary(data: dict) -> str:
         "month": "Last 30 days",
     }
     label = period_label.get(data["period"], "Period")
-
     if data["total"] == 0:
         return f"📭 No spending recorded for *{label.lower()}* yet."
-
     lines = [f"📊 *{label} — RM {data['total']:.2f}*\n"]
     for cat, amt in data["breakdown"].items():
         emoji = CAT_EMOJI.get(cat, "📦")
