@@ -22,6 +22,7 @@ app = FastAPI(lifespan=lifespan)
 
 # ── Health check ──────────────────────────────────────────────────────────────
 @app.get("/")
+@app.head("/")
 async def health():
     return {"status": "SpendBot is running 🚀"}
 
