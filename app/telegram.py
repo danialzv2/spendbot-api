@@ -11,7 +11,24 @@ async def send_message(chat_id: int, text: str) -> None:
 
 
 # ── Formatters ────────────────────────────────────────────────────────────────
-def format_log_reply(parsed: dict, timestamp: str) -> str:
+def format_receipt_reply(parsed: dict, timestamp: str) -> str:
+    from config import CAT_EMOJI
+    emoji      = CAT_EMOJI.get(parsed["category"], "📦")
+    confidence = parsed.get("confidence", "high")
+    conf_note  = "" if confidence == "high" else f"\n⚠️ _Confidence: {confidence} — please verify amount_"
+    items      = parsed.get("items", [])
+    items_str  = "\n" + "\n".join(f"  · {i}" for i in items) if items else ""
+    return (
+        f"🧾 *Receipt logged!* _{timestamp}_\n\n"
+        f"{emoji} *{parsed['category']}* — RM {parsed['amount']:.2f}\n"
+        f"📍 {parsed.get('place') or 'Unknown'}\n"
+        f"📝 {parsed.get('note') or '-'}"
+        f"{items_str}"
+        f"{conf_note}"
+    )
+
+
+
     emoji = CAT_EMOJI.get(parsed["category"], "📦")
     return (
         f"✅ *Logged!* _{timestamp}_\n\n"
@@ -50,6 +67,9 @@ HELP_TEXT = """\
 • `rm129 shoes parkson`
 • `netflix rm17`
 
+*Scan a receipt 🧾*
+Just send a photo of your receipt — SpendBot will read it automatically!
+
 *Check your spending:*
 • `summary today`
 • `summary this week`
@@ -62,7 +82,6 @@ HELP_TEXT = """\
 • `analyse my spending habits`
 • `which category should i cut down?`
 • `how much will i spend this month?`
-• `if i earn rm5000, what's left after spending?`
 
 *Other:*
 • `help` — show this message

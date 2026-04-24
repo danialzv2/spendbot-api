@@ -6,7 +6,8 @@ from fastapi.responses import JSONResponse
 from sheets import init_sheet, insert_spending, query_summary, get_financial_context
 from gemini import parse_message
 from advisor import get_advice
-from telegram import send_message, format_log_reply, format_summary, HELP_TEXT
+from receipt import parse_receipt
+from telegram import send_message, format_log_reply, format_receipt_reply, format_summary, HELP_TEXT
 
 # ── App lifecycle ─────────────────────────────────────────────────────────────
 sheet = None
@@ -34,7 +35,35 @@ async def webhook(request: Request):
         return JSONResponse({"ok": True})
 
     chat_id = message["chat"]["id"]
-    text    = message.get("text", "").strip()
+
+    # ── Photo message → receipt parsing ──────────────────────────────────────
+    if "photo" in message:
+        await send_message(chat_id, "🧾 _Reading your receipt..._")
+        try:
+            # Telegram sends multiple sizes — pick the largest (last)
+            file_id = message["photo"][-1]["file_id"]
+            parsed  = await parse_receipt(file_id)
+
+            if not parsed.get("amount"):
+                reply = "⚠️ Couldn't read the total from this receipt. Try a clearer photo or type it manually: `rm25 food mcdonalds`"
+            else:
+                timestamp = insert_spending(
+                    sheet,
+                    chat_id  = chat_id,
+                    amount   = parsed["amount"],
+                    category = parsed.get("category", "Other"),
+                    place    = parsed.get("place") or "Unknown",
+                    note     = parsed.get("note") or "",
+                )
+                reply = format_receipt_reply(parsed, timestamp)
+        except Exception as e:
+            reply = f"⚠️ Receipt error: {str(e)}"
+
+        await send_message(chat_id, reply)
+        return JSONResponse({"ok": True})
+
+    # ── Text message → normal flow ────────────────────────────────────────────
+    text = message.get("text", "").strip()
     if not text:
         return JSONResponse({"ok": True})
 
@@ -63,7 +92,6 @@ async def webhook(request: Request):
             reply = format_summary(query_summary(sheet, chat_id, "month"))
 
         elif intent == "advice":
-            # Pull rich spending context, then ask Gemini for advice
             await send_message(chat_id, "🤔 _Analysing your spending data..._")
             try:
                 context = get_financial_context(sheet, chat_id)
