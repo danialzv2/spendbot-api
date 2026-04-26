@@ -1,10 +1,39 @@
 import json
 import re
+import asyncio
 from google import genai
 from google.genai import types
-from config import GEMINI_API_KEY, GEMINI_MODEL
+from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL
 
 _client = genai.Client(api_key=GEMINI_API_KEY)
+
+_RETRIES = 2  # retries on primary before switching to fallback
+
+
+async def _generate_with_retry(contents, config) -> str:
+    """Call Gemini with automatic fallback to secondary model on 503 overload."""
+    models_to_try = [GEMINI_MODEL, GEMINI_FALLBACK_MODEL]
+
+    for i, model in enumerate(models_to_try):
+        for attempt in range(_RETRIES):
+            try:
+                response = _client.models.generate_content(
+                    model=model,
+                    contents=contents,
+                    config=config,
+                )
+                return response.text
+            except Exception as e:
+                is_503 = "503" in str(e) or "UNAVAILABLE" in str(e) or "overload" in str(e).lower()
+                if is_503:
+                    if attempt < _RETRIES - 1:
+                        await asyncio.sleep(2)   # wait before retry on same model
+                    else:
+                        break                     # exhausted retries — try fallback model
+                else:
+                    raise                         # non-503 error, don't retry
+
+    raise Exception("Gemini is currently unavailable on all models. Please try again in a moment.")
 
 _PARSE_PROMPT = """\
 You are a spending log parser for a Malaysian user. Extract spending info from the message.
@@ -46,12 +75,12 @@ Examples:
 
 async def parse_message(text: str) -> dict:
     """Send user text to Gemini and return a parsed spending dict."""
-    response = _client.models.generate_content(
-        model=GEMINI_MODEL,
+    raw = await _generate_with_retry(
         contents=_PARSE_PROMPT + f'\n\nMessage: "{text}"',
         config=types.GenerateContentConfig(
-            temperature=0.1,        # near-deterministic for structured parsing
+            max_output_tokens=256,
+            temperature=0.1,
         ),
     )
-    raw = re.sub(r"```json|```", "", response.text).strip()
+    raw = re.sub(r"```json|```", "", raw).strip()
     return json.loads(raw)
