@@ -240,8 +240,8 @@ def load_data():
     return df
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-CAT_EMOJI = {"Food":"🍜","Drinks":"🧋","Groceries":"🛒","Electronics":"💻","Clothing":"👕","Transport":"🚗","Entertainment":"🎮",
-             "Health":"💊","Bills":"📄","Education":"📚","Other":"📦"}
+CAT_EMOJI = {"Food":"🍜","Drinks":"🧋","Groceries":"🛒","Clothing":"👕","Transport":"🚗","Entertainment":"🎮",
+             "Health":"💊","Bills":"📄","Other":"📦"}
 
 def delta_html(now, prev, invert=False):
     if prev == 0:

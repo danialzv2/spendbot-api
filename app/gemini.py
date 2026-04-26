@@ -54,7 +54,7 @@ JSON keys:
 - is_spending : boolean
 - intent      : "log" | "summary_today" | "summary_week" | "summary_month" | "advice" | "help" | "unknown"
 - amount      : float or null  (MYR amount, digits only)
-- category    : one of [Food, Drinks, Groceries, Electronics, Clothing, Transport, Entertainment, Health, Bills, Education, Other] or null
+- category  : one of [Food, Drinks, Groceries, Clothing, Transport, Entertainment, Health, Bills, Other] or null
 - place       : string or null (store/restaurant name; "Unknown" if not mentioned)
 - note        : string or null (max 6 words describing the spend)
 

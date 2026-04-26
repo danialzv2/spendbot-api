@@ -24,12 +24,11 @@ CAT_EMOJI = {
     "Food":          "🍜",
     "Drinks":        "🧋",
     "Groceries":     "🛒",
-    "Electronics":   "💻",
     "Clothing":      "👕",
-    "Transport":     "🚗",
+    "Transport":     "🚗",  
     "Entertainment": "🎮",
     "Health":        "💊",
     "Bills":         "📄",
-    "Education":     "📚",
     "Other":         "📦",
 }
+

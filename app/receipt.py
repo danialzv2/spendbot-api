@@ -14,7 +14,7 @@ Extract the spending details and return ONLY valid JSON, no markdown, no extra t
 
 JSON keys:
 - amount    : float  (total amount paid in RM; look for TOTAL, JUMLAH, AMOUNT DUE)
-- category  : one of [Food, Drinks, Groceries, Electronics, Clothing, Transport, Entertainment, Health, Bills, Education, Other]
+- category  : one of [Food, Drinks, Groceries, Clothing, Transport, Entertainment, Health, Bills, Other]
 - place     : string (merchant/store name from the receipt)
 - note      : string (max 8 words describing what was purchased)
 - items     : list of strings (top 3 line items if visible, else empty list)
