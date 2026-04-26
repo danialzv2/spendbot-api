@@ -3,18 +3,21 @@ import re
 import asyncio
 from google import genai
 from google.genai import types
-from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL
+from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL, GEMINI_FALLBACK_MODEL2
 
 _client = genai.Client(api_key=GEMINI_API_KEY)
 
-_RETRIES = 2  # retries on primary before switching to fallback
+_RETRIES = 1  # retries on each model before switching to next
 
 
 async def _generate_with_retry(contents, config) -> str:
-    """Call Gemini with automatic fallback to secondary model on 503 overload."""
-    models_to_try = [GEMINI_MODEL, GEMINI_FALLBACK_MODEL]
+    """
+    Call Gemini with automatic fallback across 3 models on 503 overload or quota errors.
+    Order: gemini-3.1-flash-lite-preview → gemini-2.5-flash → gemini-2.5-flash-lite
+    """
+    models_to_try = [GEMINI_MODEL, GEMINI_FALLBACK_MODEL, GEMINI_FALLBACK_MODEL2]
 
-    for i, model in enumerate(models_to_try):
+    for model in models_to_try:
         for attempt in range(_RETRIES):
             try:
                 response = _client.models.generate_content(
@@ -24,16 +27,24 @@ async def _generate_with_retry(contents, config) -> str:
                 )
                 return response.text
             except Exception as e:
-                is_503 = "503" in str(e) or "UNAVAILABLE" in str(e) or "overload" in str(e).lower()
-                if is_503:
+                err = str(e)
+                is_retryable = (
+                    "503" in err or
+                    "UNAVAILABLE" in err or
+                    "overload" in err.lower() or
+                    "429" in err or           # quota / rate limit
+                    "RESOURCE_EXHAUSTED" in err
+                )
+                if is_retryable:
                     if attempt < _RETRIES - 1:
                         await asyncio.sleep(2)   # wait before retry on same model
                     else:
-                        break                     # exhausted retries — try fallback model
+                        break                     # exhausted retries — try next model
                 else:
-                    raise                         # non-503 error, don't retry
+                    raise                         # non-retryable error, don't retry
 
-    raise Exception("Gemini is currently unavailable on all models. Please try again in a moment.")
+    raise Exception("All Gemini models are currently unavailable. Please try again in a moment.")
+
 
 _PARSE_PROMPT = """\
 You are a spending log parser for a Malaysian user. Extract spending info from the message.
@@ -62,8 +73,8 @@ Examples:
 "rm25 lunch mcdonalds"                    -> {"is_spending":true,"intent":"log","amount":25.0,"category":"Food","place":"McDonald's","note":"lunch at McDonald's"}
 "grab rm12.50 to klcc"                   -> {"is_spending":true,"intent":"log","amount":12.5,"category":"Transport","place":"Grab","note":"ride to KLCC"}
 "how much did i spend today"             -> {"is_spending":false,"intent":"summary_today","amount":null,"category":null,"place":null,"note":null}
-"summary this week"                      -> {"is_spending":false,"intent":"summary_week","amount":null,"category":null,"place":null,"note":null}
-"summary this month"                     -> {"is_spending":false,"intent":"summary_month","amount":null,"category":null,"place":null,"note":null}
+"summary this week"                      -> {"is_spending":false,"intent":"summary_week","amount":null,"category":null,"note":null}
+"summary this month"                     -> {"is_spending":false,"intent":"summary_month","amount":null,"category":null,"note":null}
 "how much should i save daily"           -> {"is_spending":false,"intent":"advice","amount":null,"category":null,"place":null,"note":null}
 "my salary is rm4000, can i afford rent" -> {"is_spending":false,"intent":"advice","amount":4000.0,"category":null,"place":null,"note":null}
 "am i overspending on food"              -> {"is_spending":false,"intent":"advice","amount":null,"category":"Food","place":null,"note":null}

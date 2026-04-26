@@ -14,6 +14,7 @@ GSHEET_CREDS   = os.environ["GSHEET_CREDS"]
 TELEGRAM_API   = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 GEMINI_MODEL          = "gemini-3.1-flash-lite-preview"
 GEMINI_FALLBACK_MODEL = "gemini-2.5-flash"
+GEMINI_FALLBACK_MODEL2 = "gemini-2.5-flash-lite"
 
 # ── Timezone ──────────────────────────────────────────────────────────────────
 MY_TZ = ZoneInfo("Asia/Kuala_Lumpur")   # UTC+8
