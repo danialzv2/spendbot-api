@@ -240,7 +240,7 @@ def load_data():
     return df
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-CAT_EMOJI = {"Food":"🍜","Transport":"🚗","Shopping":"🛍️","Entertainment":"🎮",
+CAT_EMOJI = {"Food":"🍜","Drinks":"🧋","Groceries":"🛒","Electronics":"💻","Clothing":"👕","Transport":"🚗","Entertainment":"🎮",
              "Health":"💊","Bills":"📄","Education":"📚","Other":"📦"}
 
 def delta_html(now, prev, invert=False):
