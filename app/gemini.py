@@ -7,7 +7,7 @@ from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL, GEMINI_F
 
 _client = genai.Client(api_key=GEMINI_API_KEY)
 
-_RETRIES = 1  # retries on each model before switching to next
+_RETRIES = 2  # retries on each model before switching to next
 
 
 async def _generate_with_retry(contents, config) -> str:
