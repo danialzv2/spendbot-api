@@ -65,8 +65,8 @@ def query_summary(sheet, chat_id: int, period: str = "month") -> dict:
     elif period == "week":
         cutoff = now_my - timedelta(days=7)
     else:
-        cutoff = now_my - timedelta(days=30)
-
+        # This month only — from 1st of current month
+        cutoff = now_my.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     breakdown: dict[str, float] = {}
     total = 0.0
 

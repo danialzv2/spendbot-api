@@ -40,7 +40,7 @@ def format_summary(data: dict) -> str:
     period_label = {
         "today": "Today",
         "week":  "Last 7 days",
-        "month": "Last 30 days",
+        "month": "This Month",
     }
     label = period_label.get(data["period"], "Period")
     if data["total"] == 0:

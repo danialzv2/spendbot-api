@@ -77,7 +77,9 @@ Examples:
 "grab rm12.50 to klcc"                   -> {"is_spending":true,"intent":"log","amount":12.5,"category":"Transport","place":"Grab","note":"ride to KLCC"}
 "how much did i spend today"             -> {"is_spending":false,"intent":"summary_today","amount":null,"category":null,"place":null,"note":null}
 "summary this week"                      -> {"is_spending":false,"intent":"summary_week","amount":null,"category":null,"note":null}
-"summary this month"                     -> {"is_spending":false,"intent":"summary_month","amount":null,"category":null,"note":null}
+"summary this month"                     -> {"is_spending":false,"intent":"summary_month","amount":null,"category":null,"place":null,"note":null}
+"how much did i spend this month"        -> {"is_spending":false,"intent":"summary_month","amount":null,"category":null,"place":null,"note":null}
+"spending this month"                    -> {"is_spending":false,"intent":"summary_month","amount":null,"category":null,"place":null,"note":null}
 "how much should i save daily"           -> {"is_spending":false,"intent":"advice","amount":null,"category":null,"place":null,"note":null}
 "my salary is rm4000, can i afford rent" -> {"is_spending":false,"intent":"advice","amount":4000.0,"category":null,"place":null,"note":null}
 "am i overspending on food"              -> {"is_spending":false,"intent":"advice","amount":null,"category":"Food","place":null,"note":null}

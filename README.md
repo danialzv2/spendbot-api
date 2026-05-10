@@ -7,7 +7,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Google Cloud Run](https://img.shields.io/badge/Cloud_Run-Deployed-4285F4?style=flat-square&logo=googlecloud&logoColor=white)
-![Gemini](https://img.shields.io/badge/Gemini_2.5_Flash-AI-8E75B2?style=flat-square&logo=google&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini_3.1_Flash_Lite-AI-8E75B2?style=flat-square&logo=google&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
 ---
@@ -49,7 +49,7 @@ Telegram Bot API
 FastAPI  ──────────────────────────────────────────  Google Cloud Run
       │                                              (auto-deploys from GitHub)
       ▼  parse intent + extract amount/category
-Gemini 2.5 Flash (free, 1500 req/day)
+Gemini 3.1 Flash Lite Preview (free, 500 req/day)
       │
       ▼  append row
 Google Sheets (SpendBot spreadsheet)
@@ -132,7 +132,7 @@ spendbot/
 2. Click **Create API Key**
 3. Save it as `GEMINI_API_KEY`
 
-> Free tier: 1,500 requests/day — more than enough for personal use.
+> Free tier: 500 requests/day — more than enough for personal use.
 
 ---
 
@@ -426,7 +426,7 @@ gcloud run services update spendbot-api \
 |-------|-----------|
 | Bot interface | Telegram Bot API |
 | Backend | FastAPI + Python 3.11 |
-| AI parsing | Google Gemini 2.5 Flash (`google-genai`) |
+| AI parsing | Google Gemini 3.1 Flash Lite (`google-genai`) |
 | Receipt scanning | Gemini Vision (multimodal) |
 | Storage | Google Sheets (`gspread`) |
 | Hosting | Google Cloud Run (serverless) |
